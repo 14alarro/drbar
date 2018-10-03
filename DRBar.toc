@@ -1,6 +1,6 @@
 ## Interface: 80000
 ## Title: DRBar
-## Version: 2.1.0
+## Version: 2.2.1
 ## Notes: Diminishing Returns Bars
 ## Author: Arnaut
 ## SavedVariables: DRBarDB

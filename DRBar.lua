@@ -71,7 +71,7 @@ function DRBar:OnInitialize()
 end
 
 function DRBar:CreateBar(unitId)
-    self.bars[unitId] = CreateFrame('Frame', 'DRBarBar', UIParent, 'ActionButtonTemplate')
+    self.bars[unitId] = CreateFrame('Frame', 'DRBarBar'..unitId, UIParent)--, 'ActionButtonTemplate')
     local bar = self.bars[unitId]
     bar.drTrackers = {}
 
@@ -223,7 +223,7 @@ function DRBar:ConfigureTracker(unitId, drCategory)
     -- Crée le tracker pour drCategory s'il n'existe pas
     local bar = self.bars[unitId]
     if not bar.drTrackers[drCategory] then
-        bar.drTrackers[drCategory] = CreateFrame('CheckButton', 'DRBarDR'..drCategory, bar, 'ActionButtonTemplate')
+        bar.drTrackers[drCategory] = CreateFrame('Button', bar:GetName()..'DR'..drCategory, bar, 'DebuffButtonTemplate')
     end
 
     -- Configure le tracker
@@ -239,6 +239,7 @@ function DRBar:ConfigureTracker(unitId, drCategory)
         tracker:Show()
 
         self:ConfigureIcon(unitId, drCategory)
+        self:ConfigureBorder(unitId, drCategory)
         self:CreateCooldown(unitId, drCategory)
         self:ConfigureText(unitId, drCategory)
     else
@@ -270,13 +271,22 @@ function DRBar:ConfigureIcon(unitId, drCategory)
     tracker.texture:SetTexture(icon)
 end
 
+function DRBar:ConfigureBorder(unitId, drCategory)
+    local tracker = self.bars[unitId].drTrackers[drCategory]
+    local border = _G[tracker:GetName()..'Border']
+
+    local size = tracker:GetHeight()
+    border:SetSize(size + 3, size + 2)
+
+    local r, g, b = unpack(self.drFactorColors[tracker.drFactor])
+    border:SetVertexColor(r, g, b)
+end
+
 function DRBar:CreateCooldown(unitId, drCategory)
     local tracker = self.bars[unitId].drTrackers[drCategory]
 
-    if not tracker.cooldown.custom then
+    if not tracker.cooldown then
         tracker.cooldown = CreateFrame('Cooldown', tracker:GetName()..'Cooldown', tracker, 'CooldownFrameTemplate')
-        tracker.cooldown.custom = true
-        --tracker.cooldown:SetAllPoints()
     end
 end
 
@@ -295,11 +305,11 @@ function DRBar:ConfigureText(unitId, drCategory)
     local text = DRData:NextDR(tracker.drFactor, drCategory)
     tracker.fontString:SetText(text)
 
-    local r, g, b = unpack(self.drFactorFontColors[tracker.drFactor])
+    local r, g, b = unpack(self.drFactorColors[tracker.drFactor])
     tracker.fontString:SetTextColor(r, g, b)
 end
 
-DRBar.drFactorFontColors = {
+DRBar.drFactorColors = {
     [1] = { 0, 1, 0 },
     [0.5] = { 1, 1, 0 },
     [0.25] = { 1, 0, 0 },
@@ -326,16 +336,18 @@ end
 function DRBar:StartTracker(unitId, drCategory)
     local tracker = self.bars[unitId].drTrackers[drCategory]
     -- Lance le tracker
-    -- print(GetTime()..' Start of DR '..tracker.drCategory..' with factor '..tracker.drFactor)
-    tracker:SetScript('OnUpdate', function(this, elapsed)
-        if this.resetTime < GetTime() then
-            -- print(GetTime()..' End of DR '..tracker.drCategory)
-            this:SetScript('OnUpdate', nil)
-            self:HideTracker(unitId, drCategory)
-        end
-    end)
-    local duration = tracker.resetTime - tracker.startTime
-    tracker.cooldown:SetCooldown(tracker.startTime, duration)
+
+    if GetTime() <= tracker.resetTime then
+        tracker:SetScript('OnUpdate', function(this, elapsed)
+            if this.resetTime < GetTime() then
+                -- print(GetTime()..' End of DR '..tracker.drCategory)
+                this:SetScript('OnUpdate', nil)
+                self:HideTracker(unitId, drCategory)
+            end
+        end)
+        local duration = tracker.resetTime - tracker.startTime
+        tracker.cooldown:SetCooldown(tracker.startTime, duration)
+    end
 end
 
 function DRBar:HideTracker(unitId, drCategory)
