@@ -68,6 +68,9 @@ function DRBar:OnInitialize()
         self:CreateBar(trackedPlayer)
     end
     self:ConfigureOptions()
+
+
+    self.displayRaidBars = false
 end
 
 function DRBar:CreateBar(unitId)
@@ -140,6 +143,10 @@ function DRBar:OnEnable()
     self:RegisterEvent('COMBAT_LOG_EVENT_UNFILTERED')
     self:RegisterEvent('PLAYER_TARGET_CHANGED')
     self:RegisterEvent('PLAYER_FOCUS_CHANGED')
+    self:RegisterEvent('ZONE_CHANGED_NEW_AREA')
+
+    -- Checking if the player is already in an arena
+    self:ZONE_CHANGED_NEW_AREA()
 end
 
 function DRBar:COMBAT_LOG_EVENT_UNFILTERED(event)
@@ -208,6 +215,10 @@ end
 
 function DRBar:UpdateTracker(unitId, drCategory)
     --print(string.format('Handling CC : %d', drCategory))
+    if unitId:find('^raid') and not self.displayRaidBars then
+        return
+    end
+
     self:ConfigureTracker(unitId, drCategory)
     self:StartTracker(unitId, drCategory)
 end
@@ -388,6 +399,12 @@ function DRBar:UpdateAllBars()
     for unitId, _ in pairs(self.bars) do
         self:UpdateBar(unitId)
     end
+end
+
+function DRBar:ZONE_CHANGED_NEW_AREA()
+    local _, instanceType = IsInInstance()
+
+    self.displayRaidBars = instanceType == 'arena'
 end
 
 
